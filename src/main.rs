@@ -35,15 +35,12 @@ fn test_program(name: &str) {
     let variant = program.get_variant();
     let serialized_client = serialize_value(variant);
 
-    let vm2 = gluon::new_vm();
     println!("Deserializing...");
-    deserialize_value(&vm2, &serialized_client);
+    deserialize_value(&vm, &serialized_client);
     println!("Deserializing successful!");
 }
 
 fn main() {
-    test_program("pass");
-
     // panics
     test_program("fail");
 }

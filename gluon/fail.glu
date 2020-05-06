@@ -1,2 +1,14 @@
-let concat a b = a ++ b
-concat
+let { List, ? } = import! std.list
+
+let lindex idx list : Int -> List a -> a =
+    match list with
+    | Nil -> error "list idx out of bounds"
+    | Cons head tail ->
+        if idx == 0
+        then head
+        else lindex (idx - 1) tail
+
+{
+    lindex,
+}
+

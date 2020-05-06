@@ -5,6 +5,6 @@ authors = ["Aashish Welling <aashishwelling@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-gluon = { version = "0.13.1", features = ["serialization"] }
+gluon = { version = "0.14.1", features = ["serialization"] }
 serde_cbor = "0.10.2"
 serde_state = "0.4.7"

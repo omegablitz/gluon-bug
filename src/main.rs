@@ -44,6 +44,6 @@ fn test_program(name: &str) {
 fn main() {
     test_program("pass");
 
-    // deadlocks
+    // panics
     test_program("fail");
 }

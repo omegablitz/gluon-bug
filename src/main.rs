@@ -35,28 +35,30 @@ fn test_program(name: &str) {
         });
     let variant = program.get_variant();
     let ser_state = gluon::vm::serialization::SeSeed::new();
-    let serialized_client = serialize_value(variant.clone(), &ser_state);
-
-    let serialized_client_2 = serialize_value(variant, &ser_state);
+    let ser_1 = serialize_value(variant.clone(), &ser_state);
+    let ser_2 = serialize_value(variant, &ser_state);
 
     let vm2 = gluon::new_vm();
-    // vm2.run_expr::<gluon::vm::api::OpaqueValue<&gluon::Thread, gluon::vm::api::Hole>>(
-    //     "prelude",
-    //     "import! std.prelude\nimport! std.map\nimport! std.array\nimport! std.list\nimport! std.types\nimport! std.json\nimport! std.json.de\nimport! std.json.ser\n",
-    // )
-    //     .unwrap_or_else(|e| {
-    //         println!("{}", e);
-    //         panic!("fail to deser program")
-    //     });
-    println!("Deserializing...:\n{}", String::from_utf8(serialized_client.to_vec()).unwrap());
     let mut ctx = vm2.current_context();
     let mut de_state = gluon::vm::serialization::DeSeed::new(&vm2, &mut ctx);
-    deserialize_value(&mut de_state, &serialized_client);
-    println!("Deserializing successful!");
 
-    // let ser_state = gluon::vm::serialization::SeSeed::new();
-    println!("second...:\n{}", String::from_utf8(serialized_client_2.to_vec()).unwrap());
-    deserialize_value(&mut de_state, &serialized_client_2);
+    println!("Deserializing #1:\n{}", String::from_utf8(ser_1.to_vec()).unwrap());
+    deserialize_value(&mut de_state, &ser_1);
+    println!("Deserializing #1 successful!");
+
+
+    println!("Evalulating a random expression...");
+    // This deadlocks
+    vm2.run_expr::<gluon::vm::api::OpaqueValue<&gluon::Thread, gluon::vm::api::Hole>>(
+        "blah",
+        "0",
+    ).unwrap();
+    println!("Done evalulating!");
+
+
+    println!("Deserializing #2:\n{}", String::from_utf8(ser_2.to_vec()).unwrap());
+    deserialize_value(&mut de_state, &ser_2);
+    println!("Deserializing #2 successful!");
 }
 
 fn main() {

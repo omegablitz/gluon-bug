@@ -1,14 +1,178 @@
-let { List, ? } = import! std.list
+let { Map, foldl_with_key, singleton, ? } = import! std.map
+let { List, of } = import! std.list
+let { Option } = import! std.option
+let { empty } = import! std.monoid
+let { Result } = import! std.types
+let { (<>) } = import! std.prelude
+let { compare } = import! std.cmp
+let { map } = import! std.functor
+let { (|>) } = import! std.function
+let { unwrap_ok } = import! std.result
+let { Serialize, Value, ValueSerializer, serialize, to_string, ? } = import! std.json.ser
 
-let lindex idx list : Int -> List a -> a =
-    match list with
-    | Nil -> error "list idx out of bounds"
-    | Cons head tail ->
-        if idx == 0
-        then head
-        else lindex (idx - 1) tail
+#[derive(Eq, Serialize)]
+type Suit = | H | D | S | C
+
+let suit_idx suit : Suit -> Int =
+    match suit with
+    | H -> 3
+    | D -> 1
+    | S -> 2
+    | C -> 0
+
+let ord_Suit : Ord Suit =
+    {
+        eq = eq_Suit,
+        compare = \s1 s2 -> compare (suit_idx s1) (suit_idx s2)
+    }
+
+let show_Suit : Show Suit = {
+    show = \suit ->
+        match suit with
+        | H -> "Hearts"
+        | D -> "Diamonds"
+        | C -> "Clubs"
+        | S -> "Spades"
+}
+
+#[derive(Eq, Serialize)]
+type Card =
+    {
+        suit : Suit,
+        rank : Int,
+    }
+
+#[derive(Eq, Serialize)]
+type PlayerId = | PlayerId Int
+let ord_PlayerId : Ord PlayerId =
+    {
+        eq = eq_PlayerId,
+        compare = \id1 id2 ->
+            match (id1, id2) with
+            | (PlayerId i1, PlayerId i2) -> compare i1 i2,
+    }
+
+type Player =
+    {
+        init_hand : List Card,
+        hand : List Card, // Starts out w/ length 13
+        double_count : Map PlayerId Int, // For every other player, how many times left to double them
+        doubles : Map PlayerId (), // Contains indices of players that this player has doubled for current round
+        info_num : Option Int,
+    }
+
+let next_player steps player_id : Int -> PlayerId -> PlayerId =
+    match player_id with
+    | PlayerId id -> PlayerId ((id + steps))
+
+let all_players = of [PlayerId 0, PlayerId 1, PlayerId 2, PlayerId 3]
+
+let ser_PlayerMap : forall v . [Serialize v] -> Serialize (Map PlayerId v) = {
+    serialize = \m ->
+        serialize (foldl_with_key (\x k v ->
+            let ser_k =
+                let j : PlayerId = k
+                match to_string j with
+                | Err e -> error "fail serialize PlayerMap"
+                | Ok t -> t
+            x <> singleton ser_k v) empty m)
+}
+
+let ser_Suit : forall v . [Serialize v] -> Serialize (Map Suit v) = {
+    serialize = \m ->
+        serialize (foldl_with_key (\x k v ->
+            let ser_k =
+                let j : Suit = k
+                match to_string j with
+                | Err e -> error "fail serialize SuitMap"
+                | Ok t -> t
+            x <> singleton ser_k v) empty m)
+}
+
+let ser_List : forall v . [Serialize v] -> Serialize (List v) = {
+    serialize = \l ->
+        serialize ([])
+}
+
+type PlayerCard = { _0: PlayerId, _1: Card }
+let ser_PlayerCard : Serialize PlayerCard = {
+    serialize = \t ->
+        let (v, w) = t
+        match (serialize v, serialize w) with
+        | (Ok a, Ok b) -> Ok (Array [a, b])
+        | _ -> error "fail serialize PlayerCard"
+}
+
+#[derive(Serialize)]
+type Trick =
+    {
+        cards : Map PlayerId Card, // This is always length 4
+    }
+
+#[derive(Serialize)]
+type CurrentTrick =
+    {
+        cards : Map PlayerId Card,
+        led_suit : Option Suit, // None if not played yet
+    }
+
+#[derive(Serialize)]
+type TrumpsInfo =
+    {
+        suit : Suit
+    }
+
+#[derive(Serialize)]
+type DominoRanks = { high : Int, low : Int}
+
+#[derive(Serialize)]
+type DominoInfo =
+    {
+        start_rank : Int,
+        cards: List (PlayerId, Card), // Ordering of cards played, and who played what card
+        suit_info : Map Suit DominoRanks,
+    }
+
+#[derive(Serialize)]
+type Tricks =
+    {
+        past_tricks : List Trick,
+        current_trick : CurrentTrick,
+    }
+
+type HandInfo =
+    | Trumps TrumpsInfo Tricks
+    | Dominos DominoInfo
+    | Misere Tricks
+    | NoQueens Tricks
+    | NLT Tricks
+    | NoHearts Tricks
+    | Barbu Tricks
+
+let ser_HandInfo : Serialize HandInfo = {
+    serialize = \hi ->
+        match hi with
+        | Trumps ti t -> Ok (Array [(String "Trumps"), (serialize ti |> unwrap_ok), (serialize t |> unwrap_ok)])
+        | Dominos di -> Ok (Array [(String "Dominos"), (serialize di |> unwrap_ok)])
+        | Misere t -> Ok (Array [(String "Misere"), (serialize t |> unwrap_ok)])
+        | NoQueens t -> Ok (Array [(String "NoQueens"), (serialize t |> unwrap_ok)])
+        | NLT t -> Ok (Array [(String "NLT"), (serialize t |> unwrap_ok)])
+        | NoHearts t -> Ok (Array [(String "NoHearts"), (serialize t |> unwrap_ok)])
+        | Barbu t -> Ok (Array [(String "Barbu"), (serialize t |> unwrap_ok)])
+}
+
+#[derive(Serialize)]
+type FinishedHand =
+    {
+        num : Int,
+        dealer : PlayerId,
+        hands : Map PlayerId (List Card),
+        hand_type : HandInfo,
+        doubles : Map PlayerId (Map PlayerId ()),
+        scores : Map PlayerId Int, // Always length 4
+    }
 
 {
-    lindex,
+    serialize_FinishedHand,
 }
 

@@ -5,6 +5,7 @@ authors = ["Aashish Welling <aashishwelling@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-gluon = { version = "0.14.1", features = ["serialization"] }
-serde_cbor = "0.10.2"
+gluon = { git = "https://github.com/gluon-lang/gluon", features = ["serialization"] }
+rmp-serde = { git = "https://github.com/omegablitz/msgpack-rust" }
+serde_json = "1.0"
 serde_state = "0.4.7"
